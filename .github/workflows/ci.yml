@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: .NET 8 einrichten
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Abhängigkeiten wiederherstellen
+        run: |
+          dotnet restore tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj
+          dotnet restore src/MachineMonitor.Simulator/MachineMonitor.Simulator.csproj
+
+      - name: Bauen
+        run: |
+          dotnet build tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj --no-restore -c Release
+          dotnet build src/MachineMonitor.Simulator/MachineMonitor.Simulator.csproj --no-restore -c Release
+
+      - name: Tests ausführen
+        run: dotnet test tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj --no-build -c Release --logger "console;verbosity=normal"
+
+      - name: Docker-Images bauen
+        run: |
+          docker build --build-arg PROJECT=MachineMonitor.Api -t machine-monitor-api .
+          docker build --build-arg PROJECT=MachineMonitor.Simulator -t machine-monitor-simulator .

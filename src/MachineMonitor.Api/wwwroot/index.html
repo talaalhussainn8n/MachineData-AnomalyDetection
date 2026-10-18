@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maschinenüberwachung</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f4f6f8; color: #1f2933; }
+    header { background: #0f172a; color: #fff; padding: 1rem 1.5rem; }
+    main { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; padding: 1rem 1.5rem; }
+    .card { background: #fff; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .machines { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; grid-column: 1 / -1; }
+    .machine { cursor: pointer; border: 2px solid transparent; }
+    .machine.active { border-color: #2563eb; }
+    .machine h3 { margin: 0 0 .5rem; font-size: 1rem; }
+    .alarm-badge { float: right; background: #dc2626; color: #fff; border-radius: 10px; padding: 0 .5rem; font-size: .8rem; }
+    .value { display: flex; justify-content: space-between; font-size: .9rem; }
+    select, button { font: inherit; padding: .3rem .6rem; }
+    button { background: #b45309; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+    ul { list-style: none; padding: 0; margin: 0; max-height: 420px; overflow: auto; }
+    li { border-bottom: 1px solid #e5e7eb; padding: .5rem 0; font-size: .85rem; }
+    li time { color: #6b7280; display: block; }
+    @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header><strong>Maschinenüberwachung</strong> | Echtzeit-Anomalieerkennung mit ML.NET</header>
+  <main>
+    <div id="machines" class="machines"></div>
+
+    <section class="card">
+      <div style="display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem">
+        <strong id="title">Verlauf</strong>
+        <select id="sensor">
+          <option value="Vibration">Vibration (mm/s)</option>
+          <option value="Temperature">Temperatur (°C)</option>
+          <option value="MotorCurrent">Motorstrom (A)</option>
+        </select>
+        <button onclick="overheat()">Überhitzung simulieren</button>
+      </div>
+      <canvas id="chart" height="140"></canvas>
+    </section>
+
+    <section class="card">
+      <strong>Alarme</strong>
+      <ul id="alarms"></ul>
+    </section>
+  </main>
+
+<script>
+  const labels = { Temperature: 'Temperatur', Vibration: 'Vibration', MotorCurrent: 'Motorstrom' };
+  const units = { Temperature: '°C', Vibration: 'mm/s', MotorCurrent: 'A' };
+  let selected = null;
+
+  const chart = new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: { labels: [], datasets: [
+      { label: 'Messwert', data: [], borderColor: '#2563eb', pointRadius: 0, tension: .2 },
+      { label: 'Anomalie', data: [], borderColor: '#dc2626', backgroundColor: '#dc2626', showLine: false, pointRadius: 5 }
+    ]},
+    options: { animation: false, scales: { x: { ticks: { maxTicksLimit: 8 } } } }
+  });
+
+  const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  async function refreshMachines() {
+    const machines = await (await fetch('/api/machines')).json();
+    if (!selected && machines.length) selected = machines[0].machineId;
+    document.getElementById('machines').innerHTML = machines.map(m => `
+      <div class="card machine ${m.machineId === selected ? 'active' : ''}" onclick="select('${escapeHtml(m.machineId)}')">
+        <h3>${escapeHtml(m.machineId)} ${m.alarmCount ? `<span class="alarm-badge">${m.alarmCount}</span>` : ''}</h3>
+        ${m.latest.map(r => `<div class="value"><span>${labels[r.sensor]}</span><span>${r.value.toFixed(2)} ${units[r.sensor]}</span></div>`).join('')}
+      </div>`).join('');
+  }
+
+  async function refreshChart() {
+    if (!selected) return;
+    const sensor = document.getElementById('sensor').value;
+    const data = await (await fetch(`/api/machines/${encodeURIComponent(selected)}/readings?sensor=${sensor}&minutes=3`)).json();
+    document.getElementById('title').textContent = `Verlauf ${selected}`;
+    chart.data.labels = data.map(r => new Date(r.timestampUtc + 'Z').toLocaleTimeString('de-DE'));
+    chart.data.datasets[0].data = data.map(r => r.value);
+    chart.data.datasets[1].data = data.map(r => r.isAnomaly ? r.value : null);
+    chart.update();
+  }
+
+  async function refreshAlarms() {
+    const alarms = await (await fetch('/api/alarms?take=30')).json();
+    document.getElementById('alarms').innerHTML = alarms.map(a => `
+      <li><time>${new Date(a.timestampUtc + 'Z').toLocaleString('de-DE')} | ${escapeHtml(a.detector)}</time>${escapeHtml(a.message)}</li>`).join('')
+      || '<li>Keine Alarme.</li>';
+  }
+
+  function select(id) { selected = id; refreshMachines(); refreshChart(); }
+
+  async function overheat() {
+    if (!selected) return;
+    const res = await fetch(`/api/machines/${encodeURIComponent(selected)}/simulate-overheating`, { method: 'POST' });
+    if (!res.ok) alert('Simulation nicht aktiv (MQTT-Betrieb).');
+    document.getElementById('sensor').value = 'Temperature';
+  }
+
+  document.getElementById('sensor').addEventListener('change', refreshChart);
+  setInterval(() => { refreshMachines(); refreshChart(); refreshAlarms(); }, 2000);
+  refreshMachines().then(refreshChart); refreshAlarms();
+</script>
+</body>
+</html>
