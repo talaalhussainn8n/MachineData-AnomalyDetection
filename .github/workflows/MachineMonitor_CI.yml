@@ -18,9 +18,7 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Abhängigkeiten wiederherstellen
-        run: |
-          dotnet restore tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj
-          dotnet restore src/MachineMonitor.Simulator/MachineMonitor.Simulator.csproj
+        run: dotnet restore src/MachineMonitor.Simulator/MachineMonitor.Simulator.csproj
 
       - name: Bauen
         run: dotnet build src/MachineMonitor.Simulator/MachineMonitor.Simulator.csproj --no-restore -c Release
