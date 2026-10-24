@@ -34,4 +34,4 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Tests ausführen
-        run: dotnet test tests\MachineMonitor.Tests\MachineMonitor.csproj --no-build -c Release
+        run: dotnet test tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj --no-build -c Release

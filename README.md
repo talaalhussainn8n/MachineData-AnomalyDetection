@@ -69,7 +69,7 @@ Startet Mosquitto, SQL Server, die API und den Simulator. Dashboard unter `http:
 ## Tests
 
 ```bash
-dotnet test tests/MachineMonitor.Tests
+dotnet test tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj
 ```
 
 ## API
