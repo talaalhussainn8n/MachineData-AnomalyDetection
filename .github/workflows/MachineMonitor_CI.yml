@@ -26,7 +26,6 @@ jobs:
         run: dotnet build src/MachineMonitor.Simulator/MachineMonitor.Simulator.csproj --no-restore -c Release
   tests:
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - uses: actions/checkout@v4
       - name: .NET 8 einrichten
@@ -34,4 +33,4 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Tests ausführen
-        run: dotnet test tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj -c Release
+        run: dotnet test tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj --no-restore -c Release
