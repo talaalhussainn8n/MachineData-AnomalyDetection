@@ -30,5 +30,17 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - name: Intel OpenMP-Laufzeit installieren
+        run: |
+          curl -fsSL https://apt.repos.intel.com/oneapi/gpgkey | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneapi.list
+          sudo apt-get update
+          sudo apt-get install -y intel-oneapi-runtime-openmp
+          IOMP_PATH="$(find /opt/intel/oneapi -name libiomp5.so -print -quit)"
+          if [ -z "$IOMP_PATH" ]; then
+            echo "libiomp5.so wurde nach der Installation nicht gefunden." >&2
+            exit 1
+          fi
+          echo "LD_LIBRARY_PATH=$(dirname "$IOMP_PATH"):${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
       - name: Tests ausführen
         run: dotnet test tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj -c Release
