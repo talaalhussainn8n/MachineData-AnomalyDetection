@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="../tests/MachineMonitor.Tests/MachineMonitor.Tests.csproj" />
+  <Project Path="MachineMonitor.Api/MachineMonitor.Api.csproj" />
+  <Project Path="MachineMonitor.Core/MachineMonitor.Core.csproj" />
+  <Project Path="MachineMonitor.Simulator/MachineMonitor.Simulator.csproj" />
+</Solution>
