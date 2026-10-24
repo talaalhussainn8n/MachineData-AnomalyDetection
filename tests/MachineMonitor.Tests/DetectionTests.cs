@@ -1,5 +1,6 @@
 using MachineMonitor.Core.Detection;
 using MachineMonitor.Core.Models;
+using Xunit;
 
 namespace MachineMonitor.Tests;
 

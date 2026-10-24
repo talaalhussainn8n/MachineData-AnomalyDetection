@@ -1,6 +1,7 @@
 using MachineMonitor.Core.Messaging;
 using MachineMonitor.Core.Models;
 using MachineMonitor.Core.Simulation;
+using Xunit;
 
 namespace MachineMonitor.Tests;
 
